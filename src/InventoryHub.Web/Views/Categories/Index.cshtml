@@ -1,0 +1,44 @@
+@model IReadOnlyList<InventoryHub.Application.Categories.CategoryListItem>
+@{
+    ViewData["Title"] = "Kategoriler";
+    var isAdmin = User.IsInRole(Roles.Admin);
+}
+
+<div class="page-header">
+    <h1>Kategoriler</h1>
+    @if (isAdmin)
+    {
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Kategori</a>
+    }
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Ad</th><th>Açıklama</th><th class="text-end">Ürün Sayısı</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var c in Model)
+            {
+                <tr>
+                    <td class="fw-semibold">@c.Name</td>
+                    <td class="text-muted">@c.Description</td>
+                    <td class="text-end">
+                        <a asp-controller="Products" asp-action="Index" asp-route-categoryId="@c.Id">@c.ProductCount</a>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        @if (isAdmin)
+                        {
+                            <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-outline-secondary" title="Düzenle"><i class="bi bi-pencil"></i></a>
+                            <partial name="_DeleteButton" model='(Url.Action("Delete", new { id = c.Id }), $"\"{c.Name}\" kategorisi silinsin mi?")' />
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="4" class="text-center text-muted py-4">Henüz kategori yok.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

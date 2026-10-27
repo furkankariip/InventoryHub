@@ -1,0 +1,11 @@
+﻿@model string
+@{
+    ViewData["Title"] = "Hata";
+}
+<div class="empty-state">
+    <i class="bi bi-bug display-4 text-danger"></i>
+    <h1 class="h4 mt-3">Beklenmeyen bir hata oluştu</h1>
+    <p class="text-muted">İşleminiz tamamlanamadı. Sorun devam ederse aşağıdaki kodu yöneticinize iletin.</p>
+    <code class="small">@Model</code>
+    <div class="mt-3"><a asp-controller="Home" asp-action="Index" class="btn btn-primary">Ana sayfaya dön</a></div>
+</div>

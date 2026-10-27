@@ -1,0 +1,71 @@
+@model InventoryHub.Application.Orders.OrderDetail
+@{
+    ViewData["Title"] = $"Sipariş {Model.OrderNumber}";
+}
+
+<div class="page-header">
+    <div>
+        <a asp-action="Index" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Siparişler</a>
+        <h1 class="mt-1">
+            @Model.OrderNumber
+            <span class="badge fs-6 align-middle @Model.Status.BadgeClass()">@Model.Status.DisplayName()</span>
+        </h1>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var next in Model.NextStatuses)
+        {
+            var isCancel = next == OrderStatus.Cancelled;
+            <form asp-action="ChangeStatus" asp-route-id="@Model.Id" method="post"
+                  data-confirm="@(isCancel ? "Sipariş iptal edilecek ve ürünler stoğa iade edilecek. Emin misiniz?" : null)">
+                <input type="hidden" name="status" value="@next" />
+                <button class="btn @(isCancel ? "btn-outline-danger" : "btn-primary")">
+                    <i class="bi @(isCancel ? "bi-x-circle" : "bi-arrow-right-circle")"></i>
+                    @(isCancel ? "İptal Et" : $"{next.DisplayName()} olarak işaretle")
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Ürün</th><th>SKU</th><th class="text-end">Miktar</th><th class="text-end">Birim Fiyat</th><th class="text-end">Tutar</th></tr></thead>
+                    <tbody>
+                    @foreach (var line in Model.Lines)
+                    {
+                        <tr>
+                            <td><a asp-controller="Products" asp-action="Details" asp-route-id="@line.ProductId">@line.ProductName</a></td>
+                            <td><code>@line.Sku</code></td>
+                            <td class="text-end">@line.Quantity</td>
+                            <td class="text-end">@Format.Money(line.UnitPrice)</td>
+                            <td class="text-end">@Format.Money(line.LineTotal)</td>
+                        </tr>
+                    }
+                    </tbody>
+                    <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="4" class="text-end">Genel Toplam</td>
+                        <td class="text-end fs-5">@Format.Money(Model.TotalAmount)</td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt class="text-muted fw-normal small">Müşteri</dt>
+                    <dd><a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId">@Model.CustomerName</a><br /><span class="small text-muted">@Model.CustomerEmail</span></dd>
+                    <dt class="text-muted fw-normal small">Sipariş tarihi</dt><dd>@Format.Timestamp(Model.OrderDate)</dd>
+                    <dt class="text-muted fw-normal small">Oluşturan</dt><dd>@(Model.CreatedBy ?? "-")</dd>
+                    <dt class="text-muted fw-normal small">Not</dt><dd class="mb-0">@(Model.Notes ?? "-")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

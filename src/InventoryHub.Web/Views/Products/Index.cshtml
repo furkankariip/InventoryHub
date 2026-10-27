@@ -1,0 +1,114 @@
+@using InventoryHub.Application.Products
+@model ListViewModel<ProductQuery, ProductListItem>
+@{
+    ViewData["Title"] = "Ürünler";
+    var q = Model.Query;
+    var isAdmin = User.IsInRole(Roles.Admin);
+
+    // Sütun başlığına tıklanınca artan/azalan sıralama arasında geçiş yapar.
+    string SortUrl(ProductSort asc, ProductSort desc) => Url.Action("Index", new
+    {
+        q.Search, q.CategoryId, q.LowStockOnly, sort = q.Sort == asc ? desc : asc
+    })!;
+    string SortIcon(ProductSort asc, ProductSort desc) =>
+        q.Sort == asc ? "bi-caret-up-fill" : q.Sort == desc ? "bi-caret-down-fill" : "";
+}
+
+<div class="page-header">
+    <h1>Ürünler</h1>
+    <div class="d-flex gap-2">
+        <a asp-controller="Stock" asp-action="Adjust" class="btn btn-outline-primary"><i class="bi bi-arrow-down-up"></i> Stok Girişi</a>
+        @if (isAdmin)
+        {
+            <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Ürün</a>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body border-bottom">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input name="search" value="@q.Search" class="form-control" placeholder="Ürün adı veya stok kodu ara..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="categoryId" class="form-select" asp-items="ViewBag.Categories">
+                    <option value="">Tüm kategoriler</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="lowStockOnly" value="true" id="lowStock" @(q.LowStockOnly ? "checked" : "") />
+                    <label class="form-check-label" for="lowStock">Kritik stok</label>
+                </div>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <input type="hidden" name="sort" value="@q.Sort" />
+                <button class="btn btn-secondary flex-fill">Filtrele</button>
+                <a asp-action="Index" class="btn btn-outline-secondary" title="Temizle"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+            <tr>
+                <th><a class="sort-link" href="@SortUrl(ProductSort.Name, ProductSort.NameDesc)">Ürün <i class="bi @SortIcon(ProductSort.Name, ProductSort.NameDesc)"></i></a></th>
+                <th>SKU</th>
+                <th>Kategori</th>
+                <th class="text-end"><a class="sort-link" href="@SortUrl(ProductSort.Price, ProductSort.PriceDesc)">Fiyat <i class="bi @SortIcon(ProductSort.Price, ProductSort.PriceDesc)"></i></a></th>
+                <th class="text-end"><a class="sort-link" href="@SortUrl(ProductSort.Stock, ProductSort.StockDesc)">Stok <i class="bi @SortIcon(ProductSort.Stock, ProductSort.StockDesc)"></i></a></th>
+                <th>Durum</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in Model.Result.Items)
+            {
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.Name</a></td>
+                    <td><code>@p.Sku</code></td>
+                    <td>@p.CategoryName</td>
+                    <td class="text-end">@Format.Money(p.UnitPrice)</td>
+                    <td class="text-end">
+                        <span class="@(p.IsLowStock ? "text-danger fw-semibold" : "")">@Format.Number(p.StockQuantity)</span>
+                        @if (p.IsLowStock)
+                        {
+                            <i class="bi bi-exclamation-circle-fill text-danger" title="Kritik seviye: @p.ReorderLevel"></i>
+                        }
+                    </td>
+                    <td>
+                        @if (p.IsActive)
+                        {
+                            <span class="badge text-bg-success">Satışta</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-secondary">Pasif</span>
+                        }
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a asp-controller="Stock" asp-action="Adjust" asp-route-productId="@p.Id" class="btn btn-sm btn-outline-primary" title="Stok hareketi"><i class="bi bi-arrow-down-up"></i></a>
+                        @if (isAdmin)
+                        {
+                            <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary" title="Düzenle"><i class="bi bi-pencil"></i></a>
+                            <partial name="_DeleteButton" model='(Url.Action("Delete", new { id = p.Id }), $"\"{p.Name}\" silinsin mi?")' />
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Result.Items.Count == 0)
+            {
+                <tr><td colspan="7" class="text-center text-muted py-4">Kriterlere uygun ürün bulunamadı.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-body pt-0">
+        <partial name="_Pagination" model="Model.Result" />
+    </div>
+</div>

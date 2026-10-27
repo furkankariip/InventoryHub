@@ -1,0 +1,161 @@
+@using InventoryHub.Application.Orders
+@using InventoryHub.Application.Products
+@model CreateOrderModel
+@{
+    ViewData["Title"] = "Yeni Sipariş";
+    var products = (IReadOnlyList<OrderableProduct>)ViewBag.Products;
+
+    // Satır şablonu: hem sunucu tarafında mevcut satırları hem de JS ile eklenen yeni satırları üretir.
+    async Task Row(string index, int productId, int quantity)
+    {
+        <tr class="order-line">
+            <td>
+                <select name="Lines[@index].ProductId" class="form-select product-select" required>
+                    <option value="">Ürün seçin...</option>
+                    @foreach (var p in products)
+                    {
+                        <option value="@p.Id" data-price="@p.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                data-stock="@p.StockQuantity" selected="@(p.Id == productId)">
+                            @p.Name (@p.Sku) · stok: @p.StockQuantity
+                        </option>
+                    }
+                </select>
+            </td>
+            <td style="width: 120px">
+                <input name="Lines[@index].Quantity" type="number" min="1" value="@quantity" class="form-control quantity-input" required />
+            </td>
+            <td class="text-end text-nowrap unit-price">-</td>
+            <td class="text-end text-nowrap line-total fw-semibold">-</td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-line" title="Satırı kaldır"><i class="bi bi-x-lg"></i></button>
+            </td>
+        </tr>
+    }
+}
+
+<div class="page-header">
+    <h1>Yeni Sipariş</h1>
+</div>
+
+<form asp-action="Create" method="post" id="orderForm">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    Ürünler
+                    <button type="button" id="addLine" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-lg"></i> Satır Ekle</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Ürün</th><th>Miktar</th><th class="text-end">Birim Fiyat</th><th class="text-end">Tutar</th><th></th></tr></thead>
+                        <tbody id="lines">
+                        @for (var i = 0; i < Model.Lines.Count; i++)
+                        {
+                            await Row(i.ToString(), Model.Lines[i].ProductId, Model.Lines[i].Quantity);
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                @if (products.Count == 0)
+                {
+                    <div class="card-body text-muted">Stokta satılabilir ürün bulunmuyor.</div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="CustomerId" class="form-label"></label>
+                        <select asp-for="CustomerId" asp-items="ViewBag.Customers" class="form-select">
+                            <option value="0">Müşteri seçin...</option>
+                        </select>
+                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+                        <div class="form-text"><a asp-controller="Customers" asp-action="Create">Yeni müşteri ekle</a></div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Genel Toplam</span>
+                        <span class="fs-4 fw-bold" id="grandTotal">₺0,00</span>
+                    </div>
+                    <div class="form-text mb-3"><i class="bi bi-shield-check"></i> Fiyatlar ve stok sunucu tarafında yeniden doğrulanır.</div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg"></i> Siparişi Oluştur</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<template id="lineTemplate">
+    @{ await Row("__i__", 0, 1); }
+</template>
+
+@section Scripts {
+    <script>
+        (() => {
+            const tbody = document.getElementById('lines');
+            const template = document.getElementById('lineTemplate').innerHTML;
+            const money = v => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(v);
+
+            // Model binding için satır indekslerini 0..n-1 olarak yeniden sırala.
+            function reindex() {
+                tbody.querySelectorAll('tr.order-line').forEach((row, i) => {
+                    row.querySelectorAll('[name]').forEach(el => {
+                        el.name = el.name.replace(/Lines\[[^\]]+\]/, `Lines[${i}]`);
+                    });
+                });
+            }
+
+            function recalc() {
+                let total = 0;
+                tbody.querySelectorAll('tr.order-line').forEach(row => {
+                    const option = row.querySelector('.product-select').selectedOptions[0];
+                    const qtyInput = row.querySelector('.quantity-input');
+                    const price = parseFloat(option?.dataset.price ?? '');
+                    const stock = parseInt(option?.dataset.stock ?? '', 10);
+                    const qty = parseInt(qtyInput.value, 10) || 0;
+
+                    qtyInput.max = Number.isNaN(stock) ? '' : stock;
+                    qtyInput.classList.toggle('is-invalid', !Number.isNaN(stock) && qty > stock);
+
+                    if (Number.isNaN(price)) {
+                        row.querySelector('.unit-price').textContent = '-';
+                        row.querySelector('.line-total').textContent = '-';
+                        return;
+                    }
+                    row.querySelector('.unit-price').textContent = money(price);
+                    row.querySelector('.line-total').textContent = money(price * qty);
+                    total += price * qty;
+                });
+                document.getElementById('grandTotal').textContent = money(total);
+            }
+
+            document.getElementById('addLine').addEventListener('click', () => {
+                tbody.insertAdjacentHTML('beforeend', template);
+                reindex();
+                recalc();
+            });
+
+            tbody.addEventListener('click', e => {
+                const button = e.target.closest('.remove-line');
+                if (!button) return;
+                if (tbody.querySelectorAll('tr.order-line').length > 1) {
+                    button.closest('tr').remove();
+                    reindex();
+                    recalc();
+                }
+            });
+
+            tbody.addEventListener('input', recalc);
+            tbody.addEventListener('change', recalc);
+            recalc();
+        })();
+    </script>
+}

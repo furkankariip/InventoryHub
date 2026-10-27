@@ -1,0 +1,67 @@
+@using InventoryHub.Application.Orders
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model ListViewModel<OrderQuery, OrderListItem>
+@{
+    ViewData["Title"] = "Siparişler";
+    var q = Model.Query;
+}
+
+<div class="page-header">
+    <h1>Siparişler</h1>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Sipariş</a>
+</div>
+
+<div class="card">
+    <div class="card-body border-bottom">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Ara</label>
+                <input name="search" value="@q.Search" class="form-control" placeholder="Sipariş no veya müşteri..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Durum</label>
+                <select name="status" class="form-select"
+                        asp-items="@(new SelectList(Html.GetEnumSelectList<OrderStatus>(), "Value", "Text", ((int?)q.Status)?.ToString()))">
+                    <option value="">Tümü</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Başlangıç</label>
+                <input type="date" name="from" value="@q.From?.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Bitiş</label>
+                <input type="date" name="to" value="@q.To?.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button class="btn btn-secondary flex-fill">Filtrele</button>
+                <a asp-action="Index" class="btn btn-outline-secondary" title="Temizle"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Sipariş No</th><th>Tarih</th><th>Müşteri</th><th class="text-end">Ürün Adedi</th><th class="text-end">Tutar</th><th>Durum</th></tr></thead>
+            <tbody>
+            @foreach (var o in Model.Result.Items)
+            {
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@o.Id" class="fw-semibold text-decoration-none">@o.OrderNumber</a></td>
+                    <td class="text-nowrap">@Format.Timestamp(o.OrderDate)</td>
+                    <td>@o.CustomerName</td>
+                    <td class="text-end">@o.ItemCount</td>
+                    <td class="text-end">@Format.Money(o.TotalAmount)</td>
+                    <td><span class="badge @o.Status.BadgeClass()">@o.Status.DisplayName()</span></td>
+                </tr>
+            }
+            @if (Model.Result.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="text-center text-muted py-4">Sipariş bulunamadı.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-body pt-0">
+        <partial name="_Pagination" model="Model.Result" />
+    </div>
+</div>

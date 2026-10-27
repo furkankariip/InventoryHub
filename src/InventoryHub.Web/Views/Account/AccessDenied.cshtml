@@ -1,0 +1,9 @@
+@{
+    ViewData["Title"] = "Yetkisiz Erişim";
+}
+<div class="empty-state">
+    <i class="bi bi-shield-lock display-4 text-warning"></i>
+    <h1 class="h4 mt-3">Bu işlem için yetkiniz yok</h1>
+    <p class="text-muted">Bu sayfa yalnızca <strong>@Roles.Admin</strong> rolündeki kullanıcılara açıktır.</p>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Ana sayfaya dön</a>
+</div>

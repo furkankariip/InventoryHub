@@ -1,0 +1,6 @@
+@* Kullanım: <partial name="_DeleteButton" model='(Url.Action("Delete", new { id }), "Ürün silinsin mi?")' /> *@
+@model (string? Action, string Confirm)
+<form action="@Model.Action" method="post" class="d-inline" data-confirm="@Model.Confirm">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-sm btn-outline-danger" title="Sil"><i class="bi bi-trash"></i></button>
+</form>

@@ -1,0 +1,63 @@
+@model InventoryHub.Application.Customers.CustomerDetail
+@{
+    ViewData["Title"] = Model.FullName;
+}
+
+<div class="page-header">
+    <div>
+        <a asp-action="Index" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Müşteriler</a>
+        <h1 class="mt-1">@Model.FullName</h1>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Orders" asp-action="Create" asp-route-customerId="@Model.Id" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Sipariş Oluştur</a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Düzenle</a>
+        @if (User.IsInRole(Roles.Admin))
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="Müşteri silinsin mi?">
+                <button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt class="text-muted fw-normal small">E-posta</dt><dd><a href="mailto:@Model.Email">@Model.Email</a></dd>
+                    <dt class="text-muted fw-normal small">Telefon</dt><dd>@(Model.Phone ?? "-")</dd>
+                    <dt class="text-muted fw-normal small">Şehir</dt><dd>@(Model.City ?? "-")</dd>
+                    <dt class="text-muted fw-normal small">Adres</dt><dd>@(Model.Address ?? "-")</dd>
+                    <dt class="text-muted fw-normal small">Kayıt tarihi</dt><dd>@Format.Date(Model.CreatedAt)</dd>
+                    <dt class="text-muted fw-normal small">Toplam alışveriş</dt><dd class="fs-5 fw-bold mb-0">@Format.Money(Model.TotalSpent)</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">Siparişler (@Model.Orders.Count)</div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>No</th><th>Tarih</th><th class="text-end">Tutar</th><th>Durum</th></tr></thead>
+                    <tbody>
+                    @foreach (var o in Model.Orders)
+                    {
+                        <tr>
+                            <td><a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id">@o.OrderNumber</a></td>
+                            <td>@Format.Timestamp(o.OrderDate)</td>
+                            <td class="text-end">@Format.Money(o.TotalAmount)</td>
+                            <td><span class="badge @o.Status.BadgeClass()">@o.Status.DisplayName()</span></td>
+                        </tr>
+                    }
+                    @if (Model.Orders.Count == 0)
+                    {
+                        <tr><td colspan="4" class="text-center text-muted py-4">Henüz sipariş yok.</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

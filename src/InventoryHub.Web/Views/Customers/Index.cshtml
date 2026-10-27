@@ -1,0 +1,49 @@
+@using InventoryHub.Application.Customers
+@model ListViewModel<CustomerQuery, CustomerListItem>
+@{
+    ViewData["Title"] = "Müşteriler";
+}
+
+<div class="page-header">
+    <h1>Müşteriler</h1>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Müşteri</a>
+</div>
+
+<div class="card">
+    <div class="card-body border-bottom">
+        <form method="get" class="row g-2">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input name="search" value="@Model.Query.Search" class="form-control" placeholder="Ad, e-posta veya şehir ara..." />
+                    <button class="btn btn-secondary">Ara</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Müşteri</th><th>E-posta</th><th>Telefon</th><th>Şehir</th><th class="text-end">Sipariş</th><th class="text-end">Toplam Alışveriş</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Result.Items)
+            {
+                <tr>
+                    <td><a asp-action="Details" asp-route-id="@c.Id" class="fw-semibold text-decoration-none">@c.FullName</a></td>
+                    <td>@c.Email</td>
+                    <td class="text-nowrap">@c.Phone</td>
+                    <td>@c.City</td>
+                    <td class="text-end">@c.OrderCount</td>
+                    <td class="text-end">@Format.Money(c.TotalSpent)</td>
+                </tr>
+            }
+            @if (Model.Result.Items.Count == 0)
+            {
+                <tr><td colspan="6" class="text-center text-muted py-4">Müşteri bulunamadı.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-body pt-0">
+        <partial name="_Pagination" model="Model.Result" />
+    </div>
+</div>

@@ -1,0 +1,189 @@
+﻿@model InventoryHub.Application.Dashboard.DashboardData
+@{
+    ViewData["Title"] = "Gösterge Paneli";
+    var change = Model.MonthOverMonthChange;
+}
+
+<div class="page-header">
+    <h1>Gösterge Paneli</h1>
+    <a asp-controller="Orders" asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yeni Sipariş</a>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex gap-3 align-items-center">
+            <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="text-muted small">Bu Ay Ciro</div>
+                <div class="stat-value">@Format.Money(Model.RevenueThisMonth)</div>
+                @if (change.HasValue)
+                {
+                    <div class="small @(change >= 0 ? "text-success" : "text-danger")">
+                        <i class="bi @(change >= 0 ? "bi-arrow-up-right" : "bi-arrow-down-right")"></i>
+                        %@Math.Abs(change.Value) <span class="text-muted">geçen aya göre</span>
+                    </div>
+                }
+            </div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex gap-3 align-items-center">
+            <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <div class="text-muted small">Açık Sipariş</div>
+                <div class="stat-value">@Format.Number(Model.OpenOrders)</div>
+                <a asp-controller="Orders" asp-action="Index" asp-route-status="Pending" class="small">Bekleyenleri gör</a>
+            </div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex gap-3 align-items-center">
+            <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-boxes"></i></div>
+            <div>
+                <div class="text-muted small">Envanter Değeri</div>
+                <div class="stat-value">@Format.Money(Model.InventoryValue)</div>
+                <div class="small text-muted">@Format.Number(Model.ActiveProducts) aktif ürün</div>
+            </div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex gap-3 align-items-center">
+            <div class="stat-icon bg-info-subtle text-info"><i class="bi bi-people"></i></div>
+            <div>
+                <div class="text-muted small">Müşteri</div>
+                <div class="stat-value">@Format.Number(Model.TotalCustomers)</div>
+                <a asp-controller="Customers" asp-action="Index" class="small">Tümünü gör</a>
+            </div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header">Aylık Ciro (son 6 ay)</div>
+            <div class="card-body"><canvas id="monthlyChart" height="120"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">Kategoriye Göre Satış</div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                @if (Model.RevenueByCategory.Count == 0)
+                {
+                    <span class="text-muted">Henüz satış yok.</span>
+                }
+                else
+                {
+                    <canvas id="categoryChart"></canvas>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between">
+                Son Siparişler
+                <a asp-controller="Orders" asp-action="Index" class="small fw-normal">Tümü</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>No</th><th>Müşteri</th><th class="text-end">Tutar</th><th>Durum</th></tr></thead>
+                    <tbody>
+                    @foreach (var o in Model.RecentOrders)
+                    {
+                        <tr>
+                            <td><a asp-controller="Orders" asp-action="Details" asp-route-id="@o.Id">@o.OrderNumber</a></td>
+                            <td class="text-truncate" style="max-width: 180px">@o.CustomerName</td>
+                            <td class="text-end">@Format.Money(o.TotalAmount)</td>
+                            <td><span class="badge @o.Status.BadgeClass()">@o.Status.DisplayName()</span></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100">
+            <div class="card-header">En Çok Satanlar</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var p in Model.TopProducts)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@p.Id" class="text-truncate me-2">@p.Name</a>
+                        <span class="badge text-bg-light border">@Format.Number(p.QuantitySold) adet</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card h-100 border-danger-subtle">
+            <div class="card-header text-danger"><i class="bi bi-exclamation-triangle"></i> Kritik Stok</div>
+            <ul class="list-group list-group-flush">
+                @if (Model.LowStock.Count == 0)
+                {
+                    <li class="list-group-item text-muted">Tüm ürünler yeterli stokta.</li>
+                }
+                @foreach (var p in Model.LowStock)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@p.Id" class="text-truncate me-2">@p.Name</a>
+                        <span class="badge text-bg-danger">@p.StockQuantity / @p.ReorderLevel</span>
+                    </li>
+                }
+            </ul>
+            @if (Model.LowStock.Count > 0)
+            {
+                <div class="card-footer bg-white">
+                    <a asp-controller="Products" asp-action="Index" asp-route-lowStockOnly="true" class="small">Tüm kritik ürünler</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        const money = v => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(v);
+        const monthly = @Json.Serialize(Model.MonthlyRevenue);
+        const byCategory = @Json.Serialize(Model.RevenueByCategory);
+
+        new Chart(document.getElementById('monthlyChart'), {
+            type: 'bar',
+            data: {
+                labels: monthly.map(x => x.label),
+                datasets: [{ label: 'Ciro', data: monthly.map(x => x.value), backgroundColor: '#2563eb', borderRadius: 6 }]
+            },
+            options: {
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => money(c.parsed.y) } } },
+                scales: { y: { ticks: { callback: v => money(v) } } }
+            }
+        });
+
+        const categoryCanvas = document.getElementById('categoryChart');
+        if (categoryCanvas) {
+            new Chart(categoryCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: byCategory.map(x => x.label),
+                    datasets: [{
+                        data: byCategory.map(x => x.value),
+                        backgroundColor: ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#64748b']
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                        tooltip: { callbacks: { label: c => `${c.label}: ${money(c.parsed)}` } }
+                    }
+                }
+            });
+        }
+    </script>
+}
